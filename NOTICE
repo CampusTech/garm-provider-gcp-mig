@@ -1,0 +1,6 @@
+garm-provider-gcp-mig
+Copyright 2026 The garm-provider-gcp-mig authors
+
+This product includes code adapted from garm-provider-gcp
+(https://github.com/cloudbase/garm-provider-gcp), Copyright Cloudbase Solutions SRL,
+licensed under the Apache License, Version 2.0.

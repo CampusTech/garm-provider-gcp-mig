@@ -1,0 +1,4 @@
+# Provider config passed by GARM (config_file in [[provider]]).
+project_id = "my-project"
+region = "us-central1"          # default MIG region; pools can override with mig.region
+credentials_file = ""           # empty = service account of the GARM host (recommended)
