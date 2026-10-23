@@ -163,6 +163,9 @@ func (m *Manager) Create(ctx context.Context, rs *spec.RunnerSpec) (*computepb.I
 // createIn creates the runner in one region's MIG, cleaning up on failure.
 func (m *Manager) createIn(ctx context.Context, rs *spec.RunnerSpec, region, name string, metadata map[string]string, timeout time.Duration) (*computepb.Instance, error) {
 	if err := m.api.CreateInstance(ctx, m.project, region, rs.MIG.Name, name, metadata); err != nil {
+		// The operation may have stored the per-instance config anyway; the MIG
+		// would then create the VM later with the same runner registration.
+		m.cleanup(context.WithoutCancel(ctx), region, rs.MIG.Name, "", name)
 		return nil, fmt.Errorf("failed to create instance %s in MIG %s: %w", name, rs.MIG.Name, err)
 	}
 

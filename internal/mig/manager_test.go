@@ -221,6 +221,18 @@ func TestCreateFailsOverToNextRegion(t *testing.T) {
 	assert.Equal(t, 0, f.CountryCalls, "no country lookup for a prefix geography")
 }
 
+// A createInstances error can leave the per-instance config behind; the MIG
+// would then create the VM later, with a registration already used elsewhere.
+func TestCreateCleansUpAfterCreateErrorBeforeFailingOver(t *testing.T) {
+	f, rs := multiRegion(t)
+	f.Regions["us-east1"] = migtest.Region{Zone: "us-east1-c", CreateError: "operation failed"}
+
+	inst, err := mig.NewManager(f, "p").Create(context.Background(), rs)
+	require.NoError(t, err)
+	assert.Equal(t, "garm-abcd1234", inst.GetName())
+	assert.Equal(t, []string{"garm-abcd1234"}, f.DeletedConfigs, "first region's per-instance config removed")
+}
+
 // A flexibility policy reports attempt errors while it falls back to other
 // machine types or zones: that alone must not move the runner to another region.
 func TestCreateDoesNotFailOverOnTransientAttemptError(t *testing.T) {

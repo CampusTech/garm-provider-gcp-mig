@@ -26,6 +26,9 @@ type Region struct {
 	Zone             string
 	CreateAfterPolls int    // -1 = never (no capacity)
 	AttemptError     string // reported as the MIG's last attempt error
+	// CreateError fails createInstances after the per-instance config was
+	// stored, like an operation that errors after partly applying.
+	CreateError string
 }
 
 // Fake: createInstances registers a pending managed instance; after
@@ -125,6 +128,10 @@ func (f *Fake) CreateInstance(_ context.Context, project, region, migName, name 
 	defer f.mu.Unlock()
 	if _, exists := f.Managed[name]; exists {
 		return fmt.Errorf("409 instance %s already exists", name)
+	}
+	if r, ok := f.Regions[region]; ok && r.CreateError != "" {
+		f.Configs[name] = true
+		return errors.New(r.CreateError)
 	}
 	f.CreatedMetadata[name] = metadata
 	f.Configs[name] = true
