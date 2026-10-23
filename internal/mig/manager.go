@@ -56,18 +56,19 @@ func NewManager(api API, project string) *Manager {
 	return &Manager{api: api, project: project}
 }
 
-// MIGRegions resolves the location selectors (home = provider config region)
-// and returns, in order, the regions where the MIG exists. Regions without the
-// MIG are skipped; a MIG that could act on its own and fight GARM is refused.
-func (m *Manager) MIGRegions(ctx context.Context, selectors []string, home, name string) ([]string, error) {
+// MIGRegions resolves the location selectors minus exclude (home = provider
+// config region) and returns, in order, the regions where the MIG exists.
+// Regions without the MIG are skipped; a MIG that could act on its own and
+// fight GARM is refused.
+func (m *Manager) MIGRegions(ctx context.Context, selectors, exclude []string, home, name string) ([]string, error) {
 	candidates := selectors
-	if len(selectors) != 1 || !geo.IsRegion(selectors[0]) {
+	if len(selectors) != 1 || !geo.IsRegion(selectors[0]) || len(exclude) > 0 {
 		live, err := m.api.ListRegions(ctx, m.project)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list regions: %w", err)
 		}
 		countries := func() (map[string]string, error) { return m.api.RegionCountries(ctx, m.project) }
-		if candidates, err = geo.Resolve(selectors, live, home, countries); err != nil {
+		if candidates, err = geo.Resolve(selectors, exclude, live, home, countries); err != nil {
 			return nil, err
 		}
 	}
@@ -118,7 +119,7 @@ func checkMIGSettings(igm *computepb.InstanceGroupManager) error {
 // exists, labels it for GARM and returns it. With several regions, each but
 // the last gets region_timeout_minutes before the next one is tried.
 func (m *Manager) Create(ctx context.Context, rs *spec.RunnerSpec) (*computepb.Instance, error) {
-	regions, err := m.MIGRegions(ctx, rs.Regions, rs.HomeRegion, rs.MIG.Name)
+	regions, err := m.MIGRegions(ctx, rs.Regions, rs.MIG.ExcludeRegions, rs.HomeRegion, rs.MIG.Name)
 	if err != nil {
 		return nil, err
 	}

@@ -173,7 +173,7 @@ func (p *Provider) ValidatePoolInfo(ctx context.Context, image, flavor, provider
 	if err != nil {
 		return err
 	}
-	_, err = p.mgr.MIGRegions(ctx, regions, p.cfg.Region, es.MIG.Name)
+	_, err = p.mgr.MIGRegions(ctx, regions, es.MIG.ExcludeRegions, p.cfg.Region, es.MIG.Name)
 	return err
 }
 

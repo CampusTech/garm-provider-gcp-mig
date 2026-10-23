@@ -50,25 +50,21 @@ func Validate(sel string) error {
 }
 
 // Resolve expands selectors against the live regions into an ordered,
-// de-duplicated list. Explicit regions keep their position; a geography
-// expands to its regions, home first if it matches, then alphabetically.
-// countries (region -> ISO code) is only called for "eu" and "country:" selectors.
-func Resolve(selectors, regions []string, home string, countries func() (map[string]string, error)) ([]string, error) {
+// de-duplicated list, minus the regions matched by exclude. Explicit regions
+// keep their position; a geography expands to its regions, home first if it
+// matches, then alphabetically. countries (region -> ISO code) is only called
+// for "eu" and "country:" selectors. An exclusion that matches nothing is not
+// an error (a region may have been retired).
+func Resolve(selectors, exclude, regions []string, home string, countries func() (map[string]string, error)) ([]string, error) {
 	sorted := slices.Sorted(slices.Values(regions))
 	var codes map[string]string
-	var out []string
-	add := func(r string) {
-		if !slices.Contains(out, r) {
-			out = append(out, r)
-		}
-	}
-	for _, sel := range selectors {
+	// matches returns the live regions a selector stands for, in order.
+	matches := func(sel string) ([]string, error) {
 		if IsRegion(sel) {
 			if !slices.Contains(regions, sel) {
-				return nil, fmt.Errorf("region %s is not an available region", sel)
+				return nil, nil
 			}
-			add(sel)
-			continue
+			return []string{sel}, nil
 		}
 		var match func(string) bool
 		switch {
@@ -99,15 +95,42 @@ func Resolve(selectors, regions []string, home string, countries func() (map[str
 				matched = append(matched, r)
 			}
 		}
-		if len(matched) == 0 {
-			return nil, fmt.Errorf("%s matches no available region", sel)
-		}
 		if slices.Contains(matched, home) {
-			add(home)
+			matched = append([]string{home}, slices.DeleteFunc(matched, func(r string) bool { return r == home })...)
+		}
+		return matched, nil
+	}
+
+	excluded := map[string]bool{}
+	for _, sel := range exclude {
+		matched, err := matches(sel)
+		if err != nil {
+			return nil, err
 		}
 		for _, r := range matched {
-			add(r)
+			excluded[r] = true
 		}
+	}
+	var out []string
+	for _, sel := range selectors {
+		matched, err := matches(sel)
+		if err != nil {
+			return nil, err
+		}
+		if len(matched) == 0 {
+			if IsRegion(sel) {
+				return nil, fmt.Errorf("region %s is not an available region", sel)
+			}
+			return nil, fmt.Errorf("%s matches no available region", sel)
+		}
+		for _, r := range matched {
+			if !excluded[r] && !slices.Contains(out, r) {
+				out = append(out, r)
+			}
+		}
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("exclude_regions %v excludes every region of %v", exclude, selectors)
 	}
 	return out, nil
 }

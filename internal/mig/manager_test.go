@@ -254,6 +254,15 @@ func TestCreateHomeRegionFirst(t *testing.T) {
 	assert.Contains(t, inst.GetZone(), "us-west1-a")
 }
 
+func TestCreateSkipsExcludedRegions(t *testing.T) {
+	f, rs := multiRegion(t)
+	rs.MIG.ExcludeRegions = []string{"us-central1", "us-east1"}
+	inst, err := mig.NewManager(f, "p").Create(context.Background(), rs)
+	require.NoError(t, err)
+	assert.Contains(t, inst.GetZone(), "us-west1-a")
+	assert.Empty(t, f.DeletedConfigs, "excluded regions never tried")
+}
+
 func TestCreateAllRegionsFail(t *testing.T) {
 	f, rs := multiRegion(t)
 	f.Regions["us-east1"] = migtest.Region{Zone: "us-east1-c", CreateAfterPolls: -1, AttemptError: "east exhausted"}

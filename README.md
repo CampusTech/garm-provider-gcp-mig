@@ -59,6 +59,7 @@ credentials_file = ""      # empty = application default credentials
 | `mig.regions` | ordered location selectors, instead of `mig.region` (see below) |
 | `mig.create_timeout_minutes` | 1–120, default 10 (with `mig.regions`: for the last region) |
 | `mig.region_timeout_minutes` | 1–120, default 3: wait in one region before trying the next |
+| `mig.exclude_regions` | location selectors (same forms as `mig.regions`) never tried |
 | `custom_labels` | extra VM labels (the four provider labels are reserved) |
 | `ssh_keys`, `enable_boot_debug`, `disable_updates` | as in the official provider |
 | `runner_install_template`, `pre_install_scripts`, `extra_context` | cloud-init options from `garm-provider-common` |
@@ -81,6 +82,8 @@ Each selector is one of:
 | `country:CA` | regions in that country (ISO 3166-1 alpha-2, uppercase) |
 
 Regions are tried in selector order, without duplicates. A geography, `eu` or `country:` expands to the matching regions that are `UP`, the provider config `region` first if it matches, then alphabetically. **Regions without the MIG are skipped**, so a geography can be used while the MIG (same name) exists only in some regions; every MIG found must be safe (below). An explicit region that doesn't exist, or a selector that matches nothing, is an error.
+
+`mig.exclude_regions` takes the same selectors and removes their regions, e.g. `"regions": ["us"], "exclude_regions": ["us-east4"]` for a region where the project can't get quota, or `["country:CA"]`. An exclusion that matches nothing is ignored; excluding every region is an error.
 
 `eu` and `country:` need the Cloud Location Finder API (`cloudlocationfinder.googleapis.com`) enabled on the project and the `cloudlocationfinder.cloudLocations.list` permission.
 

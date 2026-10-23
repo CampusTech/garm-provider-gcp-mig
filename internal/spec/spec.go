@@ -50,6 +50,7 @@ type MIG struct {
 	Name                 string   `json:"name" jsonschema:"description=Name of the regional managed instance group that creates the runners."`
 	Region               string   `json:"region,omitempty" jsonschema:"description=Region of the MIG. Defaults to the provider config region."`
 	Regions              []string `json:"regions,omitempty" jsonschema:"description=Ordered location selectors tried in turn (exclusive with region): a region (us-central1)\\, a geography (us\\, northamerica\\, southamerica\\, europe\\, asia\\, australia\\, me\\, africa)\\, eu (EU member states) or country:XX (ISO code). A geography expands to its regions\\, the provider config region first. Regions without the MIG are skipped."`
+	ExcludeRegions       []string `json:"exclude_regions,omitempty" jsonschema:"description=Location selectors (same forms as regions) never tried\\, e.g. regions where the project lacks quota."`
 	CreateTimeoutMinutes int      `json:"create_timeout_minutes,omitempty" jsonschema:"minimum=1,maximum=120,description=How long to wait for the MIG to create the VM before giving up (in the last region). Default 10."`
 	RegionTimeoutMinutes int      `json:"region_timeout_minutes,omitempty" jsonschema:"minimum=1,maximum=120,description=How long to wait for the VM in one region before trying the next one. Default 3."`
 }
@@ -121,6 +122,11 @@ func (e *ExtraSpecs) Validate() error {
 	for _, sel := range e.MIG.Regions {
 		if err := geo.Validate(sel); err != nil {
 			return fmt.Errorf("mig.regions: %w", err)
+		}
+	}
+	for _, sel := range e.MIG.ExcludeRegions {
+		if err := geo.Validate(sel); err != nil {
+			return fmt.Errorf("mig.exclude_regions: %w", err)
 		}
 	}
 	if e.MIG.CreateTimeoutMinutes < 0 || e.MIG.CreateTimeoutMinutes > 120 {

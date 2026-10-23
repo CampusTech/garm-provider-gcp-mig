@@ -71,6 +71,10 @@ func TestRegionResolution(t *testing.T) {
 	require.NoError(t, err, "a geography needs no default region")
 	assert.Equal(t, []string{"us"}, rs.Regions)
 
+	rs, err = NewRunnerSpec(bootstrap(`{"mig": {"name": "g", "regions": ["us"], "exclude_regions": ["us-east4", "country:CA"]}}`), "c", "")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"us-east4", "country:CA"}, rs.MIG.ExcludeRegions)
+
 	_, err = NewRunnerSpec(bootstrap(`{"mig": {"name": "g"}}`), "c", "")
 	assert.ErrorContains(t, err, "no region")
 }
@@ -84,6 +88,7 @@ func TestExtraSpecsRejected(t *testing.T) {
 		"timeout too long":        `{"mig": {"name": "g", "create_timeout_minutes": 500}}`,
 		"region and regions":      `{"mig": {"name": "g", "region": "us-east1", "regions": ["us"]}}`,
 		"bad selector":            `{"mig": {"name": "g", "regions": ["mars"]}}`,
+		"bad exclude selector":    `{"mig": {"name": "g", "regions": ["us"], "exclude_regions": ["us-east4-a"]}}`,
 		"zone selector":           `{"mig": {"name": "g", "regions": ["us-central1-a"]}}`,
 		"lowercase country":       `{"mig": {"name": "g", "regions": ["country:ca"]}}`,
 		"uppercase geography":     `{"mig": {"name": "g", "regions": ["EU"]}}`,
